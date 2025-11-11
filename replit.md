@@ -115,12 +115,29 @@ Edit `ServerStorage/Config/GameConfig.lua` to change:
 5. Position and style the button as desired
 6. The QueueClient.lua script will automatically handle the button clicks
 
+### 2b. Create Back To Lobby Button GUI
+1. In Roblox Studio, insert another **ScreenGui** into **StarterGui**
+2. Rename it to **"BackToLobbyGUI"**
+3. Insert a **TextButton** into the ScreenGui
+4. Rename the button to **"Button"**
+5. Insert a **TextLabel** into the ScreenGui  
+6. Rename the label to **"Timer"**
+7. Position and style both elements (button should be visible, timer below it)
+8. Set the ScreenGui's **Enabled** property to **false** (it will show automatically when needed)
+9. The LobbyClient.lua script will automatically handle button clicks and countdown
+
 ### 3. Set Up Teams
 1. Create two teams in the **Teams** service:
    - **"Lobby"** team (for players waiting in lobby)
    - **"Game"** team (for players in active matches)
 
-### 4. Sync Code with Rojo
+### 4. Configure Place IDs
+1. In `GameConfig.lua`, set `Config.Matchmaking.GamePlaceId` to your game server sub-place ID (from step 1)
+2. In `GameConfig.lua`, set `Config.Matchmaking.MainLobbyPlaceId` to your main lobby place ID
+   - This is the place ID where players queue (your current place)
+   - Find it in Game Settings > Basic Info
+
+### 5. Sync Code with Rojo
 1. Open terminal and run:
    ```bash
    rojo serve
@@ -128,18 +145,20 @@ Edit `ServerStorage/Config/GameConfig.lua` to change:
 2. In Roblox Studio, connect to the Rojo server
 3. Sync all code to both your lobby place and game server sub-place
 
-### 5. Configure ServerStorage
+### 6. Configure ServerStorage
 1. In **ServerStorage**, create a folder named **"Maps"**
 2. Add your map models to this folder
 3. Each map should have a part named **"MapSpawn"** for player spawn location
 
-### 6. Test the System
+### 7. Test the System
 1. Publish both the lobby place and game server sub-place
 2. Test with at least 2 players
 3. Click the queue button in the lobby
 4. Players will be matched and teleported to a game server
-5. Eliminated players will become ghosts
-6. Winner returns all players to lobby state
+5. PvP should now work - players can hit each other
+6. Eliminated players will become ghosts and see "BACK TO LOBBY" button
+7. After match ends, all players see "BACK TO LOBBY" button with 30s countdown
+8. Players auto-teleport back to lobby or can click button to leave early
 
 ## Validation
 Run the **Validate Syntax** workflow in Replit to check all Lua files for syntax errors before syncing to Roblox.

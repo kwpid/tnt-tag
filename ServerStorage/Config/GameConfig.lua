@@ -78,6 +78,9 @@ Config.Storage = {
 Config.Remotes = {
         PvPEvent = "PvPEvent",
         RemotesFolder = "RemoteEvents",
+        LobbyTeleportEvent = "LobbyTeleportEvent",
+        ShowBackToLobbyEvent = "ShowBackToLobbyEvent",
+        HideBackToLobbyEvent = "HideBackToLobbyEvent",
 }
 
 -- Data Settings
@@ -93,7 +96,9 @@ Config.Matchmaking = {
         MaxPlayers = 25, -- Maximum players in a game
         MatchmakingInterval = 2, -- seconds between matchmaking checks
         GamePlaceId = nil, -- IMPORTANT: Set this to your game's sub-place ID!
+        MainLobbyPlaceId = nil, -- IMPORTANT: Set this to your main lobby place ID!
         WaitForPlayersTimeout = 60, -- seconds to wait for players in game server
+        EndMatchWaitTime = 30, -- seconds to wait before auto-teleporting back to lobby
 }
 
 -- Ghost Mode Settings

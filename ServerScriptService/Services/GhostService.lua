@@ -4,6 +4,7 @@
 ]]
 
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Logger = require(script.Parent.Parent.Shared.Logger)
 local Config = require(game.ServerStorage.Config.GameConfig)
@@ -18,6 +19,11 @@ function GhostService.new()
         
         self.ghosts = {}
         self.ghostStates = {} -- Store original part states
+        
+        -- Get remote events
+        local remotesFolder = ReplicatedStorage:WaitForChild(Config.Remotes.RemotesFolder)
+        self.showBackToLobbyEvent = remotesFolder:WaitForChild(Config.Remotes.ShowBackToLobbyEvent)
+        self.hideBackToLobbyEvent = remotesFolder:WaitForChild(Config.Remotes.HideBackToLobbyEvent)
         
         logger:info("GhostService initialized")
         return self
@@ -94,6 +100,12 @@ function GhostService:makeGhost(player)
         end
         
         logger:info("Player converted to ghost: " .. player.Name)
+        
+        -- Show BACK TO LOBBY button for this player
+        if self.showBackToLobbyEvent then
+                self.showBackToLobbyEvent:FireClient(player, false, nil)
+        end
+        
         return true
 end
 
@@ -170,6 +182,11 @@ function GhostService:removeGhost(player)
         
         -- Clear stored state
         self.ghostStates[player.UserId] = nil
+        
+        -- Hide BACK TO LOBBY button for this player
+        if self.hideBackToLobbyEvent then
+                self.hideBackToLobbyEvent:FireClient(player)
+        end
         
         logger:info("Removed ghost mode from player: " .. player.Name)
         return true

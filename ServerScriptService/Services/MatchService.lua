@@ -5,6 +5,9 @@
 
 local ServerStorage = game:GetService("ServerStorage")
 local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TeleportService = game:GetService("TeleportService")
+local Players = game:GetService("Players")
 
 local Logger = require(script.Parent.Parent.Shared.Logger)
 local Config = require(game.ServerStorage.Config.GameConfig)
@@ -37,6 +40,10 @@ function MatchService.new(playerService, tntService, rewardService, messagingSer
         if not self.mapFolder then
                 logger:error("Maps folder not found in ServerStorage")
         end
+        
+        -- Get remote events
+        local remotesFolder = ReplicatedStorage:WaitForChild(Config.Remotes.RemotesFolder)
+        self.showBackToLobbyEvent = remotesFolder:WaitForChild(Config.Remotes.ShowBackToLobbyEvent)
         
         logger:info("MatchService initialized with all dependencies")
         return self
@@ -245,6 +252,9 @@ function MatchService:startMatch()
                 self.ghostService:cleanupAllGhosts()
         end
         
+        -- Show BACK TO LOBBY button with countdown and auto-teleport
+        self:showEndMatchLobbyButton()
+        
         task.wait(3)
         self.tntService:resetAllTNT()
         self:clearAllPlayerAttributes()
@@ -285,6 +295,56 @@ function MatchService:runIntermission()
         return false
 end
 
+function MatchService:showEndMatchLobbyButton()
+        local waitTime = Config.Matchmaking.EndMatchWaitTime or 30
+        
+        -- Show button with countdown to all players
+        for _, player in ipairs(Players:GetPlayers()) do
+                if self.showBackToLobbyEvent then
+                        self.showBackToLobbyEvent:FireClient(player, true, waitTime)
+                end
+        end
+        
+        -- Wait for countdown then auto-teleport
+        logger:info(string.format("Waiting %d seconds before auto-teleporting to lobby", waitTime))
+        
+        -- Countdown messages
+        task.spawn(function()
+                for i = waitTime, 1, -1 do
+                        if i <= 10 or i % 10 == 0 then
+                                self.messagingService:broadcastToAll(
+                                        string.format("Returning to lobby in %d seconds...", i)
+                                )
+                        end
+                        task.wait(1)
+                end
+        end)
+        
+        task.wait(waitTime)
+        
+        -- Teleport all players back to main lobby
+        if Config.Matchmaking.MainLobbyPlaceId then
+                logger:info("Auto-teleporting all players back to main lobby")
+                
+                local playersToTeleport = {}
+                for _, player in ipairs(Players:GetPlayers()) do
+                        table.insert(playersToTeleport, player)
+                end
+                
+                if #playersToTeleport > 0 then
+                        local success, errorMessage = pcall(function()
+                                TeleportService:TeleportAsync(Config.Matchmaking.MainLobbyPlaceId, playersToTeleport)
+                        end)
+                        
+                        if not success then
+                                logger:error("Failed to teleport players to lobby: " .. tostring(errorMessage))
+                        end
+                end
+        else
+                logger:warn("MainLobbyPlaceId not configured - cannot auto-teleport to lobby")
+        end
+end
+
 function MatchService:waitForPlayersInGameServer()
         local Players = game:GetService("Players")
         local startTime = os.time()
@@ -294,9 +354,24 @@ function MatchService:waitForPlayersInGameServer()
         
         logger:info("Waiting for players to join game server...")
         
+        -- Ensure all current players are on Lobby team
+        for _, player in ipairs(Players:GetPlayers()) do
+                if player.Team ~= self.playerService:getLobbyTeam() then
+                        player.Team = self.playerService:getLobbyTeam()
+                        logger:info("Moved player to Lobby team: " .. player.Name)
+                end
+        end
+        
         while true do
                 local playerCount = #Players:GetPlayers()
                 local elapsed = os.time() - startTime
+                
+                -- Ensure all players are on Lobby team
+                for _, player in ipairs(Players:GetPlayers()) do
+                        if player.Team ~= self.playerService:getLobbyTeam() then
+                                player.Team = self.playerService:getLobbyTeam()
+                        end
+                end
                 
                 -- Check if we have enough players to start
                 if playerCount >= minPlayers then
@@ -318,6 +393,14 @@ function MatchService:waitForPlayersInGameServer()
                                 
                                 task.wait(1)
                                 countdown = countdown - 1
+                        end
+                        
+                        -- Final check: ensure all players are on Lobby team before starting
+                        for _, player in ipairs(Players:GetPlayers()) do
+                                if player.Team ~= self.playerService:getLobbyTeam() then
+                                        player.Team = self.playerService:getLobbyTeam()
+                                        logger:warn("Last-second team fix for: " .. player.Name)
+                                end
                         end
                         
                         -- Start the match
