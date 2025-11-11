@@ -1,39 +1,97 @@
-# Roblox PvP TNT Game
+# Roblox PvP TNT Game - Professional Edition
 
 ## Project Overview
-This is a **Roblox game project** written in Lua. It's a PvP (Player vs Player) game where players pass TNT to each other by hitting, and players holding TNT when the timer expires are eliminated.
+Professional Roblox PvP game with **modular service architecture**, comprehensive **DataStore persistence**, **JSON inventory system**, and easy configuration. Players pass TNT by hitting each other, and players holding TNT when the timer expires are eliminated.
 
 ## Important Note
-**This project cannot run directly in Replit.** Roblox games require the Roblox game engine and must be run through Roblox Studio or the Roblox platform.
+**This project cannot run directly in Replit.** Roblox games require the Roblox game engine and must be run through Roblox Studio or the Roblox platform. However, this Replit includes a **syntax validation workflow** to check all Lua files for errors.
+
+## Recent Refactoring (Completed)
+✅ **Complete professional refactoring completed** with:
+- Modular service architecture with dependency injection
+- Centralized configuration system
+- DataStore persistence with auto-save and retry logic
+- JSON-ready inventory system for future features
+- Professional error handling and logging
+- Service registry for shared singleton instances
 
 ## Project Structure
-- `ServerScriptService/CoreGame.lua` - Main game loop, round management, TNT mechanics, cash/XP rewards
-- `ServerScriptService/PVPServer.lua` - Server-side PvP hit detection and TNT transfer logic
-- `StarterPlayerScripts/PVPClient.lua` - Client-side input handling and raycast targeting
 
-## Game Features
-- TNT hot potato mechanics
-- Round-based elimination system
-- Cash and XP reward system
-- Win streaks and leaderboards
-- Multiple TNT skin support
-- Knockback and visual effects
+```
+ServerScriptService/
+├── Main.server.lua              # Bootstrap & service initialization
+├── PVPServer.lua                # PvP hit handling
+├── Shared/
+│   ├── Logger.lua               # Structured logging utility
+│   └── ServiceRegistry.lua      # Shared service instances
+└── Services/
+    ├── LeaderboardService.lua   # DataStore & stats with JSON inventory
+    ├── PlayerService.lua        # Player lifecycle & teleportation
+    ├── TNTService.lua           # TNT mechanics & accessories
+    ├── RewardService.lua        # Cash/XP calculations & streaks
+    ├── MessagingService.lua     # UI messages & announcements
+    ├── EffectsService.lua       # Visual & audio effects
+    └── MatchService.lua         # Game loop & round management
+
+ServerStorage/Config/
+└── GameConfig.lua               # Central configuration
+
+ReplicatedStorage/Shared/
+└── Constants.lua                # Shared client/server constants
+
+StarterPlayerScripts/
+└── PVPClient.lua                # Client input handling
+```
+
+## Key Features
+
+### Modular Architecture
+- **Service-based design** with clear separation of concerns
+- **Dependency injection** for testability
+- **ServiceRegistry** for shared singleton instances
+- **Comprehensive error handling** with pcall guards and logging
+
+### Data Persistence
+- **DataStore integration** with retry logic
+- **Auto-save** every 5 minutes
+- **JSON inventory support** ready for future features
+- **Save on player leave** and server shutdown
+
+### Easy Configuration
+- **Single config file** (`GameConfig.lua`) for all settings
+- Tune match timings, rewards, PvP mechanics without touching code
+- Built-in validation on startup
+
+### Professional Error Handling
+- **Structured Logger** with context and severity levels
+- **Retry logic** for DataStore operations
+- **Graceful degradation** when assets missing
+- **Protected async operations**
+
+## Configuration
+Edit `ServerStorage/Config/GameConfig.lua` to change:
+- Match settings (players, timings)
+- Reward calculations (cash, XP, multipliers)
+- PvP mechanics (range, knockback, cooldowns)
+- UI messages and text
 
 ## How to Use This Project
-To use this Roblox game code:
-1. Open Roblox Studio
-2. Use a tool like **Rojo** to sync this code to your Roblox place
-3. Set up the required game structure:
-   - Teams: "Lobby" and "Game"
-   - ServerStorage folders: "Maps" and "TNT" (with TNT accessories)
-   - ReplicatedStorage: RemoteEvents folder with "PvPEvent"
-   - Workspace: SpawnLocation for lobby
+1. Open **Roblox Studio**
+2. Use **Rojo** to sync this code to your Roblox place:
+   ```bash
+   rojo serve
+   ```
+3. Set up required game structure (see README.md for details)
 4. Publish and test in Roblox
 
-## Why This Can't Run in Replit
-Roblox games use Roblox's proprietary game engine services like:
-- `game:GetService()` for Players, Teams, Workspace, etc.
-- Roblox's physics and rendering engine
-- Roblox's networking and multiplayer infrastructure
+## Validation
+Run the **Validate Syntax** workflow in Replit to check all Lua files for syntax errors before syncing to Roblox.
 
-These services don't exist outside the Roblox platform.
+## Technical Notes
+- Uses DataStoreService for persistence
+- Service registry pattern for dependency management
+- Error handling with pcall and structured logging
+- JSON-serializable inventory data structure
+- Professional code organization following Roblox best practices
+
+See README.md for complete documentation.
