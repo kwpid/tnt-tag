@@ -14,7 +14,7 @@ MatchService.__index = MatchService
 
 local logger = Logger.new("MatchService")
 
-function MatchService.new(playerService, tntService, rewardService, messagingService)
+function MatchService.new(playerService, tntService, rewardService, messagingService, ghostService)
         local self = setmetatable({}, MatchService)
         
         -- Validate dependencies
@@ -27,6 +27,7 @@ function MatchService.new(playerService, tntService, rewardService, messagingSer
         self.tntService = tntService
         self.rewardService = rewardService
         self.messagingService = messagingService
+        self.ghostService = ghostService
         
         self.mapFolder = ServerStorage:WaitForChild(Config.Storage.MapFolder)
         self.currentMap = nil
@@ -85,6 +86,11 @@ function MatchService:checkForWinner()
                 
                 self.messagingService:broadcastWinner(winner.DisplayName)
                 self.rewardService:awardWinnerRewards(winner, self.gameStartPlayers)
+                
+                -- Clean up all ghosts before moving to lobby
+                if self.ghostService then
+                        self.ghostService:cleanupAllGhosts()
+                end
                 
                 -- Move all to lobby and cleanup
                 self.playerService:moveAllToLobby()
@@ -173,9 +179,15 @@ function MatchService:eliminateTNTPlayers()
                         -- Remove TNT accessory
                         self.tntService:removeTNTAccessory(player)
                         
-                        -- Teleport to lobby after brief delay
-                        task.wait(0.5)
-                        self.playerService:teleportPlayerToLobby(player)
+                        -- Convert to ghost instead of teleporting to lobby
+                        if Config.Ghost.Enabled and self.ghostService then
+                                task.wait(0.5)
+                                self.ghostService:makeGhost(player)
+                        else
+                                -- Fallback to old behavior (teleport to lobby)
+                                task.wait(0.5)
+                                self.playerService:teleportPlayerToLobby(player)
+                        end
                 end
         end
         
@@ -228,6 +240,11 @@ function MatchService:startMatch()
                 self.messagingService:broadcastWaitingForPlayers()
         end
         
+        -- Clean up all ghosts at match end
+        if self.ghostService then
+                self.ghostService:cleanupAllGhosts()
+        end
+        
         task.wait(3)
         self.tntService:resetAllTNT()
         self:clearAllPlayerAttributes()
@@ -266,6 +283,68 @@ function MatchService:runIntermission()
         end
         
         return false
+end
+
+function MatchService:waitForPlayersInGameServer()
+        local Players = game:GetService("Players")
+        local startTime = os.time()
+        local timeout = Config.Matchmaking.WaitForPlayersTimeout or 60
+        local minPlayers = Config.Matchmaking.MinPlayers
+        local maxPlayers = Config.Matchmaking.MaxPlayers
+        
+        logger:info("Waiting for players to join game server...")
+        
+        while true do
+                local playerCount = #Players:GetPlayers()
+                local elapsed = os.time() - startTime
+                
+                -- Check if we have enough players to start
+                if playerCount >= minPlayers then
+                        local countdown = 10
+                        
+                        -- Give time for more players to join
+                        while countdown > 0 do
+                                playerCount = #Players:GetPlayers()
+                                
+                                if playerCount >= maxPlayers then
+                                        logger:info("Max players reached, starting match!")
+                                        return true
+                                end
+                                
+                                self.messagingService:broadcastToAll(
+                                        string.format("Starting in %d seconds... (%d/%d players)", 
+                                        countdown, playerCount, maxPlayers)
+                                )
+                                
+                                task.wait(1)
+                                countdown = countdown - 1
+                        end
+                        
+                        -- Start the match
+                        logger:info(string.format("Starting match with %d players", playerCount))
+                        return true
+                end
+                
+                -- Check timeout
+                if elapsed >= timeout then
+                        logger:warn("Timed out waiting for players")
+                        
+                        if playerCount >= 2 then
+                                logger:info("Starting anyway with minimum players")
+                                return true
+                        else
+                                logger:error("Not enough players, cannot start match")
+                                return false
+                        end
+                end
+                
+                -- Update waiting message
+                self.messagingService:broadcastToAll(
+                        string.format("Waiting for players... (%d/%d)", playerCount, minPlayers)
+                )
+                
+                task.wait(1)
+        end
 end
 
 return MatchService
